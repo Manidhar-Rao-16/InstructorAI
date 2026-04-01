@@ -1,138 +1,114 @@
-# InstructorAI — Full Stack Project
+# 🎓 InstructorAI — AI-Powered Personalized Learning
 
-AI-powered personalized learning platform with multi-agent orchestration.
+InstructorAI is a sophisticated, full-stack learning platform that leverages **Multi-Agent Orchestration** to provide a personalized, adaptive educational experience. It automates curriculum generation, provides real-time mentoring, and evaluates progress through an intelligent task system.
 
-## Project Structure
+---
 
-```
-instructorai_project/
-├── backend/                    # FastAPI Python backend
-│   ├── main.py                 # App entry point, CORS, middleware
-│   ├── config.py               # Settings (reads .env)
-│   ├── requirements.txt        # Python dependencies
-│   ├── .env.example            # Copy to .env and fill in keys
-│   ├── start-backend.sh        # Quick start script
-│   ├── migrate_db.py           # Database migration helper
-│   ├── scheduler.py            # Background job scheduler
-│   ├── agents/
-│   │   ├── orchestrator.py     # Multi-agent routing & AI logic
-│   │   └── tools.py            # Agent tool functions (DB ops)
-│   ├── auth/
-│   │   ├── dependencies.py     # JWT auth dependency
-│   │   └── service.py          # Password hashing, JWT creation
-│   ├── db/
-│   │   ├── database.py         # Async SQLAlchemy engine
-│   │   └── models.py           # ORM models
-│   ├── routers/
-│   │   ├── auth_router.py      # /api/auth/* (login, signup, Google, logout-notify)
-│   │   ├── chat_router.py      # /api/chat/* (messages, sessions)
-│   │   ├── progress_router.py  # /api/progress/* (dashboard, roadmap, steps)
-│   │   ├── assignment_router.py# /api/tasks/* (submit, list, delete)
-│   │   ├── notification_router.py # /api/notifications/* (list, read, end-of-day)
-│   │   ├── timer_router.py     # /api/timer/* (pomodoro sessions)
-│   │   ├── export_router.py    # /api/export/* (PDF, DOCX)
-│   │   └── admin_router.py     # /api/admin/* (admin reports)
-│   └── schemas/
-│       └── schemas.py          # Pydantic request/response models
+## 🚀 Key Features
+
+| Feature | Description |
+|:---|:---|
+| **🗺️ Smart Planner** | Generates tailored roadmaps based on goals and proficiency. Features holiday management (automatic Sunday skips) and logical module sequencing. |
+| **🤖 Multi-Agent Chat** | Powered by **Microsoft AutoGen**. A specialized teaching agent provides context-aware guidance and maintains session history. |
+| **📝 AI Task System** | Dynamically creates assignments for every chapter. Submissions are graded by an AI Evaluator with detailed feedback. |
+| **📊 Analytics Dashboard** | Real-time monitoring of total topics, mastery levels, completion percentages, and average performance scores. |
+| **⏱️ Focus Timer** | Built-in Pomodoro timer (30-min sessions) with break management to optimize deep work. |
+| **📈 Progress Visuals** | Rich data visualization showing active roadmaps, chapters completed per day, and daily focus trends. |
+| **🔔 Smart Notifications** | Real-time toasts and persistent notifications for tasks, system status, and end-of-day summaries. |
+| **🔐 Secure Auth** | Email/Password and Google OAuth integration for a seamless onboarding experience. |
+
+---
+
+## 🛠️ Technology Stack
+
+### Backend (Python)
+- **Framework:** FastAPI (High performance, async)
+- **AI Orchestration:** Microsoft AutoGen (0.4+)
+- **Integrated Provider:** OpenRouter (Recommended for all agents)
+- **Fallback Models:** OpenAI GPT-4o, Google Gemini 1.5, Groq
+- **Database:** SQLite with SQLAlchemy (Async engine)
+- **Migrations:** Alembic
+- **Task Scheduling:** APScheduler
+- **Exports:** ReportLab (PDF), python-docx (DOCX)
+
+### Frontend (React)
+- **Framework:** React 19 + Vite
+- **State Management:** React Context API
+- **Charts:** Recharts
+- **Styling:** Vanilla CSS (Modern design tokens)
+- **Icons:** Lucide React
+- **UI Components:** SweetAlert2, React Dropzone, Markdown Rendering
+- **Diagrams:** Mermaid.js
+
+---
+
+## 📂 Project Structure
+
+```text
+instructorai/
+├── backend/                    # FastAPI Server
+│   ├── main.py                 # Application Entry Point
+│   ├── agents/                 # AutoGen Multi-Agent Logic
+│   ├── api/                    # Core LLM Clients
+│   ├── auth/                   # JWT & OAuth Services
+│   ├── db/                     # Models & Database Logic
+│   ├── routers/                # API Endpoints (Auth, Chat, Progress, etc.)
+│   └── schemas/                # Pydantic Data Models
 │
-└── frontend/                   # React + Vite frontend
-    ├── package.json
-    ├── vite.config.js
-    ├── .env.example             # Copy to .env and fill in keys
-    ├── index.html
-    ├── public/
-    │   ├── logo.png
-    │   └── favicon.ico
-    └── src/
-        ├── App.jsx              # Router, layout, protected routes
-        ├── main.jsx             # React entry point
-        ├── index.css            # Global styles & design tokens
-        ├── services/
-        │   └── api.js           # Axios API client (all endpoints)
-        ├── contexts/
-        │   ├── AuthContext.jsx  # User auth state (login/signup/logout)
-        │   ├── ChatContext.jsx  # Chat sessions state
-        │   ├── TimerContext.jsx # Pomodoro timer global state
-        │   └── ThemeContext.jsx # Dark/light theme
-        ├── components/
-        │   ├── Navbar.jsx       # Top nav, user profile dropdown, notifications
-        │   ├── Sidebar.jsx      # Chat history sidebar (date-grouped)
-        │   ├── AuthModal.jsx    # Login/Signup/Forgot Password modal
-        │   └── NotificationPanel.jsx # Notifications dropdown
-        └── pages/
-            ├── Home.jsx         # Landing page (public)
-            ├── Dashboard.jsx    # Main dashboard with stats
-            ├── Planner.jsx      # Roadmap generator + daily modules
-            ├── Chat.jsx         # InstructorAI chatbot + lesson panel
-            ├── Tasks.jsx        # Assignments (pending + graded)
-            ├── Timer.jsx        # Pomodoro focus timer
-            ├── Progress.jsx     # Analytics & progress charts
-            └── Admin.jsx        # Admin user management
+├── frontend/                   # Vite + React Client
+│   ├── src/
+│   │   ├── components/         # Reusable UI Blocks
+│   │   ├── contexts/           # Global State Management
+│   │   ├── pages/              # Main Route Components
+│   │   └── services/           # Axios API Interface
+│   └── public/                 # Static Assets
+│
+└── .gitignore                  # Optimized Git Configuration
 ```
 
-## Quick Start
+---
 
-### Backend
+## 🏁 Getting Started
 
+### 1. Prerequisites
+- Python 3.10+
+- Node.js 18+
+- API Keys (OpenAI, Gemini, or Groq)
+
+### 2. Backend Setup
 ```bash
 cd backend
-
-# 1. Create virtual environment
 python3 -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-
-# 2. Install dependencies
+source venv/bin/activate
 pip install -r requirements.txt
-
-# 3. Configure environment
 cp .env.example .env
-# Edit .env and add your API keys (GEMINI_API_KEY is required at minimum)
-
-# 4. Start the server
+# Update .env with your API keys
 python main.py
-# OR use the script:
-bash start-backend.sh
 ```
 
-Backend runs at: http://localhost:8000  
-API docs: http://localhost:8000/api/docs
-
-### Frontend
-
+### 3. Frontend Setup
 ```bash
 cd frontend
-
-# 1. Install dependencies
 npm install
-
-# 2. Configure environment
 cp .env.example .env
-# VITE_API_URL defaults to http://localhost:8000/api
-
-# 3. Start dev server
 npm run dev
 ```
 
-Frontend runs at: http://localhost:5173
+---
 
-## Features
+## 🗝️ Environment Configuration
 
-| Feature | Description |
-|---|---|
-| 🏠 Landing Page | Public intro page with Sign In / Get Started |
-| 🔐 Auth | Email/password + Google OAuth, forgot password flow |
-| 📊 Dashboard | Stats: Total Topics, Mastered, Completion %, Avg Score, Focus Time |
-| 🗺️ Planner | AI roadmap generator with proficiency levels, holiday skip (Sundays) |
-| 🤖 InstructorAI Chat | Multi-agent chatbot with chat history grouped by date |
-| 📝 Tasks | Auto-generated assignments per chapter, AI evaluation with scores |
-| ⏱️ Focus Timer | 30-min Pomodoro with break management |
-| 📈 Progress | Charts: focus time, chapters/day, active & completed roadmaps |
-| 🔔 Notifications | Popup toasts + panel: login, task added, EOD summary, logout |
-| 👤 User Profile | Dropdown with name, email, role, and sign-out |
+### Backend `.env`
+- `GEMINI_API_KEY`: Required for primary/fallback logic.
+- `OPENAI_API_KEY`: Recommended for advanced evaluation.
+- `DATABASE_URL`: Defaults to `sqlite+aiosqlite:///./instructorai.db`.
+- `JWT_SECRET`: For session security.
 
-## API Keys Required
+### Frontend `.env`
+- `VITE_API_URL`: Backend URL (Default: `http://localhost:8000/api`)
+- `VITE_GOOGLE_CLIENT_ID`: Required for Google login features.
 
-- **GEMINI_API_KEY** — Required (roadmap generation fallback)
-- **OPENAI_API_KEY** — Recommended (teaching agent, assignment evaluation)
-- **GROQ_API_KEY** — Optional (faster roadmap generation)
-- **GOOGLE_CLIENT_ID** — Optional (for Google Sign-In button)
+---
+
+## 📜 License & Acknowledgments
+Built with ❤️ using [FastAPI](https://fastapi.tiangolo.com/), [React](https://reactjs.org/), and [AutoGen](https://microsoft.github.io/autogen/).
