@@ -72,6 +72,7 @@ export default function Timer() {
                         placeholder="e.g. Python Basics, React Hooks..."
                         value={topic}
                         onChange={e => setTopic(e.target.value)}
+                        autoComplete="off"
                         style={{ textAlign: 'center', fontSize: '14px' }}
                     />
                 </div>

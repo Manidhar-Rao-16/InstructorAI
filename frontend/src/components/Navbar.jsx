@@ -96,7 +96,13 @@ export default function Navbar() {
   return (
     <>
       <nav className="navbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+          {/* Mobile hamburger — next to logo */}
+          {user && (
+            <button className="btn btn-ghost hamburger-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} id="mobile-menu-btn">
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          )}
           <Link to={user ? '/dashboard' : '/'} className="navbar-logo" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <img src="/logo.png" alt="InstructorAI" style={{ width: '32px', height: '32px', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
             <span className="logo-text">InstructorAI</span>
@@ -106,8 +112,8 @@ export default function Navbar() {
         {user && (
           <>
             {/* Desktop nav */}
-            <div className="navbar-menu-desktop" style={{ flex: 1, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
-              <div className="navbar-menu" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginLeft: 0, marginRight: 0 }}>
+            <div className="navbar-menu-desktop">
+              <div className="navbar-menu">
                 {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
                   <Link key={to} to={to} className={`navbar-link ${pathname.startsWith(to) && to !== '/' ? 'active' : ''}`} style={{ whiteSpace: 'nowrap' }}>
                     <Icon className="icon" size={15} />{label}
@@ -229,10 +235,6 @@ export default function Navbar() {
                 )}
               </div>
 
-              {/* Mobile hamburger */}
-              <button className="btn btn-ghost" style={{ display: 'none', padding: '8px' }} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} id="mobile-menu-btn">
-                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-              </button>
             </div>
           </>
         )}
@@ -247,6 +249,35 @@ export default function Navbar() {
           </div>
         )}
       </nav>
+
+      {/* Mobile menu overlay */}
+      {isMobileMenuOpen && (
+        <div className="mobile-menu-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsMobileMenuOpen(false); }}>
+          <div className="mobile-menu-content">
+            <div className="mobile-menu-header">
+              <Link to={user ? '/dashboard' : '/'} className="navbar-logo" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <img src="/logo.png" alt="InstructorAI" style={{ width: '28px', height: '28px', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+                <span style={{ fontSize: '18px', fontWeight: 800, background: 'var(--gradient-hero)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>InstructorAI</span>
+              </Link>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="btn btn-ghost" style={{ padding: '6px', borderRadius: '8px' }}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="mobile-menu-links">
+              {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+                <Link key={to} to={to} className={`mobile-menu-link ${pathname.startsWith(to) && to !== '/' ? 'active' : ''}`} onClick={() => setIsMobileMenuOpen(false)}>
+                  <Icon size={18} /> {label}
+                </Link>
+              ))}
+            </div>
+            <div className="mobile-menu-footer">
+              <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '10px', border: 'none', background: 'rgba(239,68,68,0.06)', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: '#ef4444' }}>
+                <LogOut size={16} /> Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast popup notifications */}
       <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px' }}>

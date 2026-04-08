@@ -820,14 +820,15 @@ textarea.input {
   display: flex;
   align-items: center;
   flex: 1;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .navbar-menu {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: 40px;
-  margin-right: auto;
+  justify-content: center;
 }
 
 @media (max-width: 960px) {

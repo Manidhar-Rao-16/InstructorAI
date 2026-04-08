@@ -446,7 +446,7 @@ export default function Tasks() {
                                         <div>
                                             <div style={{ fontSize: '14px', fontWeight: 700 }}>Score: {selectedTask.score}/100</div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                                                {selectedTask.score >= 80 ? '🌟 Excellent work!' : selectedTask.score >= 60 ? '👍 Good job, keep it up!' : '💪 Room to improve — review the feedback'}
+                                                {selectedTask.status === 'pending' ? '⚠️ Revision Required — please update your submission.' : (selectedTask.score >= 80 ? '🌟 Excellent work!' : selectedTask.score >= 60 ? '👍 Good job, keep it up!' : '💪 Room to improve — review the feedback')}
                                             </div>
                                         </div>
                                     </div>
@@ -466,22 +466,6 @@ export default function Tasks() {
                             {/* Submit Section — only for pending */}
                             {selectedTask.status === 'pending' && (
                                 <div>
-                                    {selectedTask.feedback && (
-                                        <div style={{ marginBottom: '20px', padding: '16px', borderRadius: '12px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontWeight: 700, fontSize: '14px', marginBottom: '8px' }}>
-                                                ⚠️ Revision Required {(selectedTask.score !== null && selectedTask.score !== undefined) ? `(Score: ${selectedTask.score}/100)` : ''}
-                                            </div>
-                                            <div className="markdown-body" style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedTask.feedback}</ReactMarkdown>
-                                            </div>
-                                            {selectedTask.improvements && (
-                                                <div style={{ marginTop: '10px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
-                                                    <strong>💡 Suggestion:</strong> {selectedTask.improvements}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
                                     <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>Submit Your Solution</h4>
 
                                     {/* Text answer */}

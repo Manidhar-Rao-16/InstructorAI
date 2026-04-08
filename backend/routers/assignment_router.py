@@ -88,7 +88,12 @@ async def submit_text_assignment(
         )
         assignment = result.scalar_one_or_none()
 
+    # Capture previous evaluation data for resubmission context
+    previous_score = None
+    previous_feedback = None
     if assignment:
+        previous_score = assignment.score
+        previous_feedback = assignment.feedback
         # Update existing record
         assignment.submission_type = SubmissionTypeEnum.text
         assignment.submission_content = payload.content
@@ -117,7 +122,7 @@ async def submit_text_assignment(
         if fetched_topic:
             session_topic = fetched_topic
 
-    evaluation = await _evaluate_assignment(db, current_user.id, payload.content, payload.title, session_topic)
+    evaluation = await _evaluate_assignment(db, current_user.id, payload.content, payload.title, session_topic, previous_score=previous_score, previous_feedback=previous_feedback)
     assignment.score = evaluation.get("score")
     assignment.feedback = evaluation.get("feedback")
     assignment.improvements = evaluation.get("improvements")
@@ -211,7 +216,12 @@ async def submit_file_assignment(
         )
         assignment = result.scalar_one_or_none()
 
+    # Capture previous evaluation data for resubmission context
+    previous_score = None
+    previous_feedback = None
     if assignment:
+        previous_score = assignment.score
+        previous_feedback = assignment.feedback
         # Update existing record
         assignment.submission_type = SubmissionTypeEnum.file
         assignment.submission_content = text_content
@@ -244,7 +254,7 @@ async def submit_file_assignment(
             if fetched_topic:
                 session_topic = fetched_topic
         
-        evaluation = await _evaluate_assignment(db, current_user.id, text_content, title, session_topic)
+        evaluation = await _evaluate_assignment(db, current_user.id, text_content, title, session_topic, previous_score=previous_score, previous_feedback=previous_feedback)
         assignment.score = evaluation.get("score")
         assignment.feedback = evaluation.get("feedback")
         assignment.improvements = evaluation.get("improvements")
@@ -305,12 +315,44 @@ async def get_my_assignments(
     return out
 
 
-async def _evaluate_assignment(db: AsyncSession, user_id: int, content: str, title: str, topic: str = "General") -> dict:
-    """Use AssignmentEvaluatorAgent to score and provide feedback."""
+async def _evaluate_assignment(
+    db: AsyncSession,
+    user_id: int,
+    content: str,
+    title: str,
+    topic: str = "General",
+    previous_score: float = None,
+    previous_feedback: str = None,
+) -> dict:
+    """Use AssignmentEvaluatorAgent to score and provide feedback.
+    
+    When previous_score and previous_feedback are provided, includes them
+    in the prompt so the AI can see what changed and adjust the score
+    dynamically (up for improvements, down for regressions).
+    """
+    # Build resubmission context if this is a corrected answer
+    resubmission_context = ""
+    if previous_score is not None and previous_feedback is not None:
+        resubmission_context = (
+            f"\n\n--- RESUBMISSION CONTEXT ---\n"
+            f"This is a RESUBMISSION. The student previously scored {previous_score}/100.\n"
+            f"Previous mentor feedback was:\n{previous_feedback[:1500]}\n"
+            f"--- END RESUBMISSION CONTEXT ---\n\n"
+            "CRITICAL RESUBMISSION RULES:\n"
+            f"- The previous score was {previous_score}. You MUST NOT default to the same score.\n"
+            "- Compare this new submission against the previous feedback point by point.\n"
+            "- If the student fixed the issues mentioned, INCREASE the score significantly (e.g. +10 to +20 points).\n"
+            "- If the student made the submission worse, DECREASE the score.\n"
+            "- If the submission is identical or nearly identical, keep the same score.\n"
+            "- A fully corrected submission that addresses all feedback should score 95-100.\n"
+            "- DO NOT anchor to the previous score. Evaluate the new submission independently but USE the previous feedback as a comparison baseline.\n"
+        )
+
     prompt = (
         f"I've submitted an assignment titled '{title}' for the topic '{topic}'. Here is my work "
         f"(which may be plain text, document text, or source code):\n\n"
-        f"--- SUBMISSION START ---\n{content}\n--- SUBMISSION END ---\n\n"
+        f"--- SUBMISSION START ---\n{content}\n--- SUBMISSION END ---\n"
+        f"{resubmission_context}"
         "As a strict but helpful mentor, please EVALUATE this submission. "
         "CRITICAL INSTRUCTION: FIRST, verify if the submission is actually relevant to the topic and title. "
         "If it is source code, evaluate its correctness, logic, optimal complexity, and style based on the assignment topic. "
@@ -321,7 +363,10 @@ async def _evaluate_assignment(db: AsyncSession, user_id: int, content: str, tit
         "If it IS a valid attempt, provide constructive feedback on my strengths and where I can improve. "
         "You MUST score it fairly from 0 to 100 based on ACTUAL correctness. A perfect or fully correct answer should be scored 100. "
         "Calculate the score dynamically based on the percentage of requirements met, the correctness of the code, and edge cases handled. "
-        "Please don't forget the hidden JSON line at the very end of your response for the system, formatted exactly like this: `{\"score\": <actual_number_score_0_to_100>, \"improvements_summary\": \"...\"}`."
+        "IMPORTANT: At the very end of your response, include exactly ONE line with a raw JSON object (no backticks, no code blocks). "
+        "Format: {\"score\": <actual_number_score_0_to_100>, \"improvements_summary\": \"...\"}\n"
+        "Example of the JSON line: {\"score\": 92, \"improvements_summary\": \"Add error handling for edge cases\"}\n"
+        "The JSON MUST be on its own line with NO surrounding backticks or markdown formatting."
     )
     try:
         from agents.orchestrator import _safe_run_agent
@@ -346,44 +391,60 @@ async def _evaluate_assignment(db: AsyncSession, user_id: int, content: str, tit
             f.write(traceback.format_exc())
         logger.error(f"EVALUATION CRASH: {traceback.format_exc()}")
         return {
-            "score": 88.8,
+            "score": 0.0,
             "feedback": f"Our AI mentor is currently offline. Error: {str(e)}",
             "improvements": "Please check eval_crash.log in the backend directory."
         }
 
-    # Default values
+    # Default values — use a sentinel that won't collide with real scores
+    _SENTINEL_SCORE = -1.0
     eval_data = {
-        "score": 70.0,
+        "score": _SENTINEL_SCORE,
         "feedback": reply,
         "improvements": "Review the mentor's feedback for suggested improvements."
     }
 
-    # Extract JSON block (the last line or any line containing { })
-    # This regex is specifically looking for the system result JSON
+    # Extract JSON block from the response
+    # The AI should place it on the last line, but we scan in reverse to be safe
     lines = reply.split("\n")
     for line in reversed(lines):
         line = line.strip()
+        # Strip backticks and code block markers that LLMs sometimes add
+        line = line.strip('`').strip()
+        if line.startswith("json"):
+            line = line[4:].strip()
         if line.startswith("{") and line.endswith("}"):
             try:
                 system_json = json.loads(line)
-                eval_data["score"] = float(system_json.get("score", 70.0))
-                eval_data["improvements"] = system_json.get("improvements_summary", eval_data["improvements"])
-                # We optionally strip the JSON line from the feedback shown to the user
-                eval_data["feedback"] = reply.replace(line, "").strip()
-                break
-            except Exception:
+                if "score" in system_json:
+                    parsed_score = float(system_json["score"])
+                    # Clamp to valid range
+                    eval_data["score"] = max(0.0, min(100.0, parsed_score))
+                    eval_data["improvements"] = system_json.get("improvements_summary", eval_data["improvements"])
+                    # Strip the JSON line from the user-facing feedback
+                    eval_data["feedback"] = reply.replace(line, "").strip()
+                    logger.info(f"EVAL SCORE PARSED: {eval_data['score']} for '{title}'")
+                    break
+            except (json.JSONDecodeError, ValueError, TypeError):
                 continue
     
-    # If no JSON found on a single line, try a broader search
-    if eval_data["score"] == 70.0:
-        json_match = re.search(r"\{.*\"score\".*\}", reply)
+    # Fallback: broader regex search if no clean JSON line was found
+    if eval_data["score"] == _SENTINEL_SCORE:
+        json_match = re.search(r'\{[^{}]*"score"\s*:\s*(\d+\.?\d*)[^{}]*\}', reply)
         if json_match:
             try:
                 system_json = json.loads(json_match.group())
-                eval_data["score"] = float(system_json.get("score", 70.0))
+                parsed_score = float(system_json.get("score", 0))
+                eval_data["score"] = max(0.0, min(100.0, parsed_score))
                 eval_data["improvements"] = system_json.get("improvements_summary", eval_data["improvements"])
+                logger.info(f"EVAL SCORE PARSED (regex fallback): {eval_data['score']} for '{title}'")
             except Exception:
                 pass
+
+    # Final fallback: if still no score extracted, log a warning
+    if eval_data["score"] == _SENTINEL_SCORE:
+        logger.warning(f"EVAL SCORE EXTRACTION FAILED for '{title}'. Raw reply (last 500 chars): {reply[-500:]}")
+        eval_data["score"] = 50.0  # Neutral fallback rather than a misleading number
 
     return eval_data
 @router.delete("/{assignment_id}")

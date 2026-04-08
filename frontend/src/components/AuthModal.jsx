@@ -34,6 +34,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
         try {
             if (mode === 'login') await login(form.email, form.password);
             else await signup(form.email, form.password, form.display_name);
+            setForm({ email: '', password: '', display_name: '' });
             onClose();
         } catch (err) {
             setError(err.response?.data?.detail || 'Something went wrong. Please try again.');
@@ -178,20 +179,20 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
                             <div style={{ flex: 1, height: '1px', background: 'var(--border-glass)' }} />
                         </div>
 
-                        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <form onSubmit={submit} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             {mode === 'signup' && (
                                 <div style={{ position: 'relative' }}>
                                     <User size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                    <input style={{ ...inputStyle, paddingLeft: '40px' }} type="text" placeholder="Display name" value={form.display_name} onChange={update('display_name')} required />
+                                    <input style={{ ...inputStyle, paddingLeft: '40px' }} type="text" placeholder="Display name" value={form.display_name} onChange={update('display_name')} autoComplete="off" required />
                                 </div>
                             )}
                             <div style={{ position: 'relative' }}>
                                 <Mail size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input style={{ ...inputStyle, paddingLeft: '40px' }} type="email" placeholder="Email address" value={form.email} onChange={update('email')} required />
+                                <input style={{ ...inputStyle, paddingLeft: '40px' }} type="email" placeholder="Email address" value={form.email} onChange={update('email')} autoComplete="off" required />
                             </div>
                             <div style={{ position: 'relative' }}>
                                 <Lock size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '44px' }} type={showPass ? 'text' : 'password'} placeholder="Password" value={form.password} onChange={update('password')} required />
+                                <input style={{ ...inputStyle, paddingLeft: '40px', paddingRight: '44px' }} type={showPass ? 'text' : 'password'} placeholder="Password" value={form.password} onChange={update('password')} autoComplete="new-password" required />
                                 <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
                                     {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                                 </button>
